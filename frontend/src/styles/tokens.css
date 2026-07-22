@@ -1,0 +1,83 @@
+/*
+  ABC Enterprises - design tokens.
+
+  This is the ONLY file that declares raw color, type, spacing, or radius
+  values. Every other stylesheet and component references these variables;
+  none of them introduce a new color, font, or spacing value of their own.
+*/
+:root {
+  /* Color - an ink-and-brass institutional palette: a deep navy for
+     authority and stability, warm brass as the single accent, on a quiet
+     paper background. Chosen to read as a private, trustworthy operating
+     system for a company - not a marketing site. */
+  --color-ink-900: #0f1a2e;
+  --color-ink-800: #16223b;
+  --color-ink-700: #1f2d4a;
+  --color-ink-600: #33456b;
+  --color-slate-500: #5b6472;
+  --color-slate-300: #9aa3b2;
+  --color-slate-200: #c9cfd9;
+  --color-paper-100: #f7f6f3;
+  --color-paper-000: #ffffff;
+  --color-brass-600: #9c7a3c;
+  --color-brass-500: #b4924f;
+  --color-brass-100: #f1e6cf;
+  --color-success-600: #1e7f52;
+  --color-success-100: #e3f3ea;
+  --color-danger-600: #af3131;
+  --color-danger-100: #fbe9e9;
+  --color-focus: #4c74e6;
+
+  /* Typography */
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(15, 26, 46, 0.06), 0 1px 1px rgba(15, 26, 46, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 26, 46, 0.10), 0 2px 6px rgba(15, 26, 46, 0.06);
+  --shadow-lg: 0 24px 64px rgba(15, 26, 46, 0.18), 0 4px 12px rgba(15, 26, 46, 0.08);
+
+  /* Layout */
+  --container-max: 1120px;
+  --breakpoint-tablet: 900px;
+  --breakpoint-mobile: 600px;
+
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+}

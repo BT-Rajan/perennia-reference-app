@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abc-enterprises-reference-backend"
+version = "0.1.0"
+description = "ABC Enterprises reference application backend (perennia-auth + perennia-access integration demo)"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.111,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "python-dotenv>=1.0,<2",
+    "pydantic>=2.6,<3",
+
+    # Core Perennia packages. These are NOT vendored into this repository -
+    # they are installed as Git dependencies, exactly as a real Perennia
+    # application would consume them.
+    "perennia-auth @ git+https://github.com/BT-Rajan/perennia-auth.git@v1.0.0",
+    "perennia-access @ git+https://github.com/BT-Rajan/perennia-access.git@v1.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
