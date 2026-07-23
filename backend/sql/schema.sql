@@ -289,3 +289,27 @@ CREATE TABLE IF NOT EXISTS quotations (
     INDEX idx_status (status),
     INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Client quotations, role-gated creation and approval';
+
+-- Orders: created only as a side effect of POST /api/quotations/{id}/approve.
+-- No orders.create is granted through normal role assignment - see
+-- backend/app/permissions/definitions.py and OrdersHooks in app/hooks.py.
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    order_no VARCHAR(50) NOT NULL UNIQUE,
+    quotation_id BIGINT NOT NULL UNIQUE,
+    client_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity_kg DECIMAL(14,3) NOT NULL,
+    bag_size_kg DECIMAL(10,3) NOT NULL DEFAULT 50,
+    bags INT NOT NULL DEFAULT 0,
+    status ENUM('Pending','In Production','Shipped','Delivered','Cancelled') NOT NULL DEFAULT 'Pending',
+    notes TEXT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_order_quotation FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Orders, created only via quotation approval';

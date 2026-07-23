@@ -35,6 +35,15 @@ quotation_approval_in_progress: ContextVar[bool] = ContextVar(
     "quotation_approval_in_progress", default=False
 )
 
+# Flipped on for the duration of the order creation inside
+# POST /api/quotations/{id}/approve only (see app/api/crud.py). OrdersHooks
+# rejects every create() call made while this is False, so an order can
+# never be created any other way - not through a route, not directly via
+# crud_orders.create().
+order_creation_in_progress: ContextVar[bool] = ContextVar(
+    "order_creation_in_progress", default=False
+)
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Clients Hooks
@@ -324,3 +333,47 @@ class QuotationsHooks:
     def after_delete(existing: dict) -> None:
         """Log quotation deletion."""
         logger.info(f"Quotation soft-deleted: {existing['id']} - {existing['quotation_no']}")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Orders Hooks
+# ═════════════════════════════════════════════════════════════════════════════
+
+class OrdersHooks:
+    """Business logic hooks for Order CRUD operations.
+
+    before_create is the actual enforcement point for "an order can only be
+    created by approving a quotation": it raises unless
+    order_creation_in_progress is set, which only happens inside
+    POST /api/quotations/{id}/approve.
+    """
+
+    @staticmethod
+    def before_create(data: dict) -> None:
+        """Reject any create() not made via quotation approval."""
+        if not order_creation_in_progress.get():
+            raise ValueError(
+                "Orders can only be created by approving a quotation "
+                "(POST /api/quotations/{id}/approve)"
+            )
+
+    @staticmethod
+    def after_create(record: dict) -> None:
+        """Log order creation."""
+        logger.info(f"Order created: {record['id']} - {record['order_no']} (from quotation {record['quotation_id']})")
+
+    @staticmethod
+    def before_update(existing: dict, data: dict) -> None:
+        """Validate order updates."""
+        if "quotation_id" in data and data["quotation_id"] != existing.get("quotation_id"):
+            raise ValueError("Cannot change the quotation an order was created from")
+
+    @staticmethod
+    def after_update(record: dict) -> None:
+        """Log order update."""
+        logger.info(f"Order updated: {record['id']} - {record['order_no']} (status: {record['status']})")
+
+    @staticmethod
+    def after_delete(existing: dict) -> None:
+        """Log order deletion."""
+        logger.info(f"Order soft-deleted: {existing['id']} - {existing['order_no']}")

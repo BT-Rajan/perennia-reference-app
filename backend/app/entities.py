@@ -84,3 +84,20 @@ quotations = EntitySchema(
     soft_delete_column="deleted_at",
     permission_prefix="quotations"
 )
+
+# Orders entity
+#
+# Only ever created by POST /api/quotations/{id}/approve - see
+# OrdersHooks.before_create in app/hooks.py, which rejects any create()
+# call not made during that endpoint.
+orders = EntitySchema(
+    table="orders",
+    fields=[
+        "order_no", "quotation_id", "client_id", "product_id", "quantity_kg",
+        "bag_size_kg", "bags", "status", "notes"
+    ],
+    primary_key="id",
+    soft_delete=True,
+    soft_delete_column="deleted_at",
+    permission_prefix="orders"
+)

@@ -30,9 +30,10 @@ from app.deps import (
     crud_formulas,
     crud_suppliers,
     crud_quotations,
+    crud_orders,
 )
 from app.permissions.definitions import QUOTATIONS_APPROVE
-from app.hooks import quotation_approval_in_progress
+from app.hooks import quotation_approval_in_progress, order_creation_in_progress
 
 router = APIRouter(prefix="/api", tags=["CRUD"])
 
@@ -659,4 +660,103 @@ def approve_quotation(
     finally:
         quotation_approval_in_progress.reset(token)
 
+    # The only place an order is ever created. order_creation_in_progress
+    # gates OrdersHooks.before_create - no other code path can pass it.
+    order_token = order_creation_in_progress.set(True)
+    try:
+        crud_orders.create(
+            {
+                "order_no": f"ORD-{record['quotation_no']}",
+                "quotation_id": record["id"],
+                "client_id": record["client_id"],
+                "product_id": record["product_id"],
+                "quantity_kg": record["quantity_kg"],
+                "bag_size_kg": record["bag_size_kg"],
+                "bags": record["bags"],
+            },
+            identity=identity,
+        )
+    finally:
+        order_creation_in_progress.reset(order_token)
+
     return UpdateResponse(data=record)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Orders Endpoints
+#
+# There is deliberately no POST /api/orders route. Orders are only ever
+# created inside approve_quotation() above - see order_creation_in_progress
+# in app/hooks.py, which OrdersHooks.before_create enforces regardless of
+# how create() is invoked.
+# ═════════════════════════════════════════════════════════════════════════════
+
+@router.get("/orders", response_model=ListResponse)
+def list_orders(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    client_id: Optional[int] = None,
+    status: Optional[str] = None,
+    identity: Identity = Depends(identity_required),
+):
+    """List all orders with optional filtering."""
+    filters = {}
+    if client_id:
+        filters["client_id"] = client_id
+    if status:
+        filters["status"] = status
+
+    query = ListQuery(page=page, page_size=page_size, filters=filters)
+    result = crud_orders.list(query, identity=identity)
+    return ListResponse(
+        data=result.items,
+        meta=ListResponseMeta(
+            pagination=PaginationInfo(
+                total=result.total,
+                page=result.page,
+                page_size=result.page_size
+            )
+        )
+    )
+
+
+@router.get("/orders/{order_id}")
+def get_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Get a single order by ID."""
+    try:
+        record = crud_orders.get(order_id, identity=identity)
+        return {"data": record}
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+
+@router.put("/orders/{order_id}", response_model=UpdateResponse)
+def update_order(order_id: int, data: dict, identity: Identity = Depends(identity_required)):
+    """Update an existing order (e.g. fulfillment status)."""
+    try:
+        record = crud_orders.update(order_id, data, identity=identity)
+        return UpdateResponse(data=record)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/orders/{order_id}", response_model=DeleteResponse)
+def delete_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Delete (soft delete) an order."""
+    try:
+        success = crud_orders.delete(order_id, identity=identity)
+        return DeleteResponse(success=success)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+
+@router.post("/orders/{order_id}/restore")
+def restore_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Restore a soft-deleted order."""
+    try:
+        record = crud_orders.restore(order_id, identity=identity)
+        return {"data": record}
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")

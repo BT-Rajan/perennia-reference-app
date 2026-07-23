@@ -73,6 +73,18 @@ QUOTATIONS_DELETE = "quotations.delete"
 QUOTATIONS_RESTORE = "quotations.restore"
 QUOTATIONS_APPROVE = "quotations.approve"
 
+# ─── Orders Entity Permissions
+# orders.create is NOT granted through the ROLES table below - it is granted
+# exclusively to QUOTATION_APPROVER_ROLE (.env), and even that role can only
+# use it from inside POST /api/quotations/{id}/approve (see
+# order_creation_in_progress in app/hooks.py). No route accepts a direct
+# order create request.
+ORDERS_CREATE = "orders.create"
+ORDERS_READ = "orders.read"
+ORDERS_UPDATE = "orders.update"
+ORDERS_DELETE = "orders.delete"
+ORDERS_RESTORE = "orders.restore"
+
 PERMISSIONS: list[tuple[str, str]] = [
     (PROFILE_VIEW, "View your own profile page"),
     (REPORTS_VIEW, "View the reports area"),
@@ -113,6 +125,11 @@ PERMISSIONS: list[tuple[str, str]] = [
     (QUOTATIONS_DELETE, "Delete quotations"),
     (QUOTATIONS_RESTORE, "Restore quotations"),
     (QUOTATIONS_APPROVE, "Approve quotations"),
+    (ORDERS_CREATE, "Create orders (granted only to the quotation approver role)"),
+    (ORDERS_READ, "View orders"),
+    (ORDERS_UPDATE, "Update orders"),
+    (ORDERS_DELETE, "Delete orders"),
+    (ORDERS_RESTORE, "Restore orders"),
 ]
 
 # Demo application roles and the permissions each one carries.
@@ -125,7 +142,7 @@ ROLES: dict[str, dict] = {
             PROFILE_VIEW, SEARCH_ACCESS, FILES_VIEW,
             # Read-only access to all CRUD entities
             CLIENTS_READ, PRODUCTS_READ, RAW_MATERIALS_READ,
-            FORMULAS_READ, SUPPLIERS_READ, QUOTATIONS_READ,
+            FORMULAS_READ, SUPPLIERS_READ, QUOTATIONS_READ, ORDERS_READ,
         ],
     },
     "manager": {
@@ -141,6 +158,7 @@ ROLES: dict[str, dict] = {
             SUPPLIERS_CREATE, SUPPLIERS_READ, SUPPLIERS_UPDATE, SUPPLIERS_DELETE, SUPPLIERS_RESTORE,
             # quotations.create is granted separately below, to QUOTATION_CREATOR_ROLE only
             QUOTATIONS_READ, QUOTATIONS_UPDATE, QUOTATIONS_DELETE, QUOTATIONS_RESTORE,
+            ORDERS_READ, ORDERS_UPDATE, ORDERS_DELETE, ORDERS_RESTORE,
         ],
     },
     "administrator": {
@@ -156,6 +174,7 @@ ROLES: dict[str, dict] = {
             SUPPLIERS_CREATE, SUPPLIERS_READ, SUPPLIERS_UPDATE, SUPPLIERS_DELETE, SUPPLIERS_RESTORE,
             # quotations.create is granted separately below, to QUOTATION_CREATOR_ROLE only
             QUOTATIONS_READ, QUOTATIONS_UPDATE, QUOTATIONS_DELETE, QUOTATIONS_RESTORE,
+            ORDERS_READ, ORDERS_UPDATE, ORDERS_DELETE, ORDERS_RESTORE,
         ],
     },
 }
@@ -226,3 +245,15 @@ def seed(access: PerenniaAccess, settings) -> None:
         # goes through CrudEngine.update() to persist the status change.
         if should_approve and QUOTATIONS_UPDATE not in held:
             access.assign_permission_to_role(role_code, QUOTATIONS_UPDATE)
+
+        # orders.create follows the approver role the same way
+        # quotations.approve does - only the approve endpoint ever uses it,
+        # and only while order_creation_in_progress is set (app/hooks.py).
+        has_order_create = ORDERS_CREATE in held
+        if should_approve and not has_order_create:
+            access.assign_permission_to_role(role_code, ORDERS_CREATE)
+        elif not should_approve and has_order_create:
+            access.unassign_permission_from_role(role_code, ORDERS_CREATE)
+        # CrudEngine.create() re-fetches the record it just inserted.
+        if should_approve and ORDERS_READ not in held:
+            access.assign_permission_to_role(role_code, ORDERS_READ)
