@@ -19,10 +19,12 @@ from perennia_access import (
     DatabaseConfig as AccessDatabaseConfig,
     AuthenticatedIdentity,
 )
+from perennia_crud import CrudEngine, CrudConfig, DatabaseConfig as CrudDatabaseConfig
 
 from app.config.settings import load_settings
 from app.config.errors import AppError
 from app.mailer import ConsoleMailer
+from app import entities
 
 settings = load_settings()
 
@@ -52,6 +54,27 @@ access = PerenniaAccess(
         ),
     )
 )
+
+# CRUD Engine Configuration - shared across all entities
+crud_config = CrudConfig(
+    database=CrudDatabaseConfig(
+        host=settings.db_host,
+        port=settings.db_port,
+        user=settings.db_user,
+        password=settings.db_password,
+        database=settings.db_name,
+    ),
+    default_page_size=20,
+    max_page_size=100,
+)
+
+# CRUD Engine Instances - one per entity, using perennia-crud once for all
+crud_clients = CrudEngine(crud_config, entities.clients, access=access)
+crud_products = CrudEngine(crud_config, entities.products, access=access)
+crud_raw_materials = CrudEngine(crud_config, entities.raw_materials, access=access)
+crud_formulas = CrudEngine(crud_config, entities.formulas, access=access)
+crud_suppliers = CrudEngine(crud_config, entities.suppliers, access=access)
+crud_orders = CrudEngine(crud_config, entities.orders, access=access)
 
 
 def _extract_bearer_token(authorization: str | None) -> str:
@@ -98,3 +121,13 @@ def require_permission(permission_code: str):
         return identity
 
     return _dependency
+
+
+def identity_required(
+    identity: AuthenticatedIdentity = Depends(get_current_identity),
+) -> AuthenticatedIdentity:
+    """Dependency: authenticated identity is required, but no specific
+    permission is checked. Entity-level and operation-level permissions are
+    enforced by perennia-crud instances in the CRUD layer.
+    """
+    return identity

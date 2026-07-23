@@ -166,3 +166,123 @@ CREATE TABLE IF NOT EXISTS user_roles (
     INDEX idx_role_id (role_id),
     INDEX idx_assigned_at (assigned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Assignment of roles to users (subjects from perennia-auth)';
+
+
+-- ============================================================
+-- Business Domain Tables
+-- ============================================================
+
+-- Clients: Customer/Client master records
+CREATE TABLE IF NOT EXISTS clients (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(254) NULL,
+    phone VARCHAR(50) NULL,
+    address TEXT NULL,
+    gstin VARCHAR(20) NULL,
+    contact_person VARCHAR(150) NULL,
+    payment_terms VARCHAR(100) NULL,
+    credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    notes TEXT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Client/Customer master records';
+
+-- Products: Finished goods product definitions
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    category VARCHAR(100) NULL,
+    description TEXT NULL,
+    default_bag_size_kg DECIMAL(10,3) NOT NULL DEFAULT 50,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Product definitions';
+
+-- Raw Materials: Raw material definitions
+CREATE TABLE IF NOT EXISTS raw_materials (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    unit VARCHAR(20) NOT NULL DEFAULT 'kg',
+    description TEXT NULL,
+    supplier_id BIGINT NULL,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Raw material definitions';
+
+-- Formulas: Bill of Materials (BOM) - product composition
+CREATE TABLE IF NOT EXISTS formulas (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    product_id BIGINT NOT NULL,
+    material_id BIGINT NOT NULL,
+    percentage DECIMAL(8,4) NOT NULL,
+    notes TEXT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    UNIQUE KEY uq_formula_line (product_id, material_id),
+    CONSTRAINT fk_formula_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_formula_material FOREIGN KEY (material_id) REFERENCES raw_materials(id) ON DELETE CASCADE,
+    INDEX idx_product_id (product_id),
+    INDEX idx_material_id (material_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Product formulas (Bill of Materials)';
+
+-- Suppliers: Supplier master records
+CREATE TABLE IF NOT EXISTS suppliers (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    contact_person VARCHAR(150) NULL,
+    phone VARCHAR(50) NULL,
+    email VARCHAR(254) NULL,
+    address TEXT NULL,
+    gstin VARCHAR(20) NULL,
+    category VARCHAR(100) NULL,
+    rating TINYINT NULL,
+    payment_terms VARCHAR(100) NULL,
+    delivery_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    notes TEXT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Supplier master records';
+
+-- Orders: Customer orders
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    order_no VARCHAR(50) NOT NULL UNIQUE,
+    client_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity_kg DECIMAL(14,3) NOT NULL,
+    bag_size_kg DECIMAL(10,3) NOT NULL DEFAULT 50,
+    bags INT NOT NULL DEFAULT 0,
+    delivery_date DATE NULL,
+    status ENUM('Pending','Confirmed','In Production','Ready','Shipped','Closed','Cancelled') NOT NULL DEFAULT 'Pending',
+    priority ENUM('Critical','High','Normal','Low') NOT NULL DEFAULT 'Normal',
+    notes TEXT NULL,
+    quotation_no VARCHAR(50) NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_order_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_client_id (client_id),
+    INDEX idx_product_id (product_id),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Customer orders';
