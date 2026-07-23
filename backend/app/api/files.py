@@ -9,6 +9,8 @@ from fastapi.responses import StreamingResponse
 import io
 
 from perennia_access import AuthenticatedIdentity
+# Import BaseModel for response models
+from pydantic import BaseModel
 
 from app.deps import access, get_current_identity
 from app.permissions.definitions import FILES_UPLOAD, FILES_VIEW, FILES_MANAGE
@@ -523,5 +525,3 @@ def generate_from_document(
     )
 
 
-# Import BaseModel for response models
-from pydantic import BaseModel
