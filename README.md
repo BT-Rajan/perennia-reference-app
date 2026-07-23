@@ -125,6 +125,34 @@ abc-enterprises-reference/
 Defined once in `backend/app/permissions/definitions.py` and seeded into
 `perennia-access` idempotently on every backend startup.
 
+## Database files
+
+- `backend/sql/schema.sql` — a **generated** snapshot: the actual `schema.sql`
+  files shipped inside the installed `perennia-auth` and `perennia-access`
+  packages, exported verbatim and concatenated. Produced by
+  `backend/scripts/generate_schema_sql.py`; re-run that script after
+  upgrading either dependency rather than hand-editing the output. Equivalent
+  to what `backend/scripts/init_db.py` applies at setup time - this file
+  exists so the schema can also be applied with a plain SQL client.
+- `backend/sql/test_data.sql` — seeds the application's permission
+  vocabulary and the three demo roles into `perennia-access` (mirrors
+  `backend/app/permissions/definitions.py`, which seeds the same data
+  automatically on every backend startup). It intentionally contains no
+  `perennia-auth` data - see below.
+- `backend/scripts/seed_demo_data.py` — creates three **login-ready** demo
+  accounts, one per role. A real account needs a password hash produced by
+  perennia-auth's own hashing code, which can't be hand-written as SQL
+  without reimplementing authentication, so this goes through the real
+  `perennia-auth` / `perennia-access` APIs instead (the same ones the
+  backend itself uses) and auto-verifies each account in-process. Safe to
+  re-run - existing accounts are skipped.
+
+  | Role | Email | Password |
+  |---|---|---|
+  | Employee | `employee.demo@abc-enterprises.example` | `DemoPass123` |
+  | Manager | `manager.demo@abc-enterprises.example` | `DemoPass123` |
+  | Administrator | `administrator.demo@abc-enterprises.example` | `DemoPass123` |
+
 ## Setup
 
 Prerequisites: Python 3.10+, Node.js 18+, a running MySQL-compatible server
@@ -146,6 +174,9 @@ cp frontend/.env.example frontend/.env
 
 # 3. Initialize the database (applies both packages' schema.sql)
 python backend/scripts/init_db.py
+
+# 3b. Optional: create login-ready demo accounts (see Database files below)
+python backend/scripts/seed_demo_data.py
 
 # 4. Run the backend
 uvicorn app.main:app --reload --port 8000 --app-dir backend
