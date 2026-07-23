@@ -40,6 +40,12 @@ class Settings:
     cors_origins: list
     environment: str
 
+    # Quotations workflow: the only two roles allowed to create, and to
+    # approve, a quotation. Must name roles that exist in
+    # app.permissions.definitions.ROLES.
+    quotation_creator_role: str
+    quotation_approver_role: str
+
 
 def load_settings() -> Settings:
     signing_secret = os.getenv("AUTH_SIGNING_SECRET", "")
@@ -61,4 +67,6 @@ def load_settings() -> Settings:
         require_email_verification=_get_bool("REQUIRE_EMAIL_VERIFICATION", False),
         cors_origins=[o.strip() for o in cors_origins_raw.split(",") if o.strip()],
         environment=os.getenv("ENVIRONMENT", "development"),
+        quotation_creator_role=os.getenv("QUOTATION_CREATOR_ROLE", "manager"),
+        quotation_approver_role=os.getenv("QUOTATION_APPROVER_ROLE", "administrator"),
     )
