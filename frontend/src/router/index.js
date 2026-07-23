@@ -39,6 +39,36 @@ const routes = [
     meta: { requiresAuth: true, permission: "file.view" },
   },
   {
+    path: "/clients",
+    name: "clients",
+    component: () => import("../pages/ClientsPage.vue"),
+    meta: { requiresAuth: true, permission: "clients.read" },
+  },
+  {
+    path: "/products",
+    name: "products",
+    component: () => import("../pages/ProductsPage.vue"),
+    meta: { requiresAuth: true, permission: "products.read" },
+  },
+  {
+    path: "/raw-materials",
+    name: "raw-materials",
+    component: () => import("../pages/RawMaterialsPage.vue"),
+    meta: { requiresAuth: true, permission: "raw_materials.read" },
+  },
+  {
+    path: "/suppliers",
+    name: "suppliers",
+    component: () => import("../pages/SuppliersPage.vue"),
+    meta: { requiresAuth: true, permission: "suppliers.read" },
+  },
+  {
+    path: "/quotations",
+    name: "quotations",
+    component: () => import("../pages/QuotationsPage.vue"),
+    meta: { requiresAuth: true, permission: "quotations.read" },
+  },
+  {
     path: "/administration",
     name: "administration",
     component: () => import("../pages/AdministrationPage.vue"),

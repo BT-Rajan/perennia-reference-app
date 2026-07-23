@@ -9,6 +9,11 @@
           <router-link v-if="hasPermission('reports.view')" to="/reports">Reports</router-link>
           <router-link v-if="hasPermission('search.execute')" to="/search">Search</router-link>
           <router-link v-if="hasPermission('file.view')" to="/files">Files</router-link>
+          <router-link v-if="hasPermission('clients.read')" to="/clients">&#128101;&nbsp;Clients</router-link>
+          <router-link v-if="hasPermission('products.read')" to="/products">&#128230;&nbsp;Products</router-link>
+          <router-link v-if="hasPermission('raw_materials.read')" to="/raw-materials">&#129704;&nbsp;Raw Materials</router-link>
+          <router-link v-if="hasPermission('suppliers.read')" to="/suppliers">&#128666;&nbsp;Suppliers</router-link>
+          <router-link v-if="hasPermission('quotations.read')" to="/quotations">&#128221;&nbsp;Quotations</router-link>
           <router-link v-if="hasPermission('admin.access')" to="/administration">Administration</router-link>
           <button type="button" @click="onSignOut">Sign out</button>
         </template>
