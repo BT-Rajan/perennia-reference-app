@@ -261,6 +261,30 @@
   margin-bottom: var(--space-2);
 }
 
+/* Shared list-table look, used by every generic CRUD page
+   (ResourceCrudPage.vue) as well as FilesPage's version history table. */
+.resource-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.resource-table th,
+.resource-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-slate-200);
+}
+
+.dim {
+  color: var(--color-slate-500);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+}
+
 .badge-eyebrow {
   display: inline-block;
   font-family: var(--font-mono);
