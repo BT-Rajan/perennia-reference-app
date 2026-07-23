@@ -18,6 +18,8 @@ dependencies = [
     # application would consume them.
     "perennia-auth @ git+https://github.com/BT-Rajan/perennia-auth.git@v1.0.0",
     "perennia-access @ git+https://github.com/BT-Rajan/perennia-access.git@v1.0.0",
+    "perennia-search @ git+https://github.com/BT-Rajan/perennia-search.git@main",
+    "perennia-files @ git+https://github.com/BT-Rajan/perennia-files.git@main",
 ]
 
 [tool.setuptools.packages.find]

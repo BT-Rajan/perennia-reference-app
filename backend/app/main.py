@@ -12,7 +12,7 @@ from perennia_access import AccessError
 from app.config.errors import AppError, resolve
 from app.deps import settings, access
 from app.permissions import definitions as permission_definitions
-from app.api import auth, home, profile, reports, administration
+from app.api import auth, home, profile, reports, administration, search, files
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("abc_enterprises")
@@ -32,6 +32,8 @@ app.include_router(home.router)
 app.include_router(profile.router)
 app.include_router(reports.router)
 app.include_router(administration.router)
+app.include_router(search.router)
+app.include_router(files.router)
 
 
 @app.on_event("startup")

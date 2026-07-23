@@ -17,10 +17,24 @@ PROFILE_VIEW = "profile.view"
 REPORTS_VIEW = "reports.view"
 ADMIN_ACCESS = "admin.access"
 
+# Search permissions (perennia-search integration)
+SEARCH_ACCESS = "search.execute"
+SEARCH_MANAGE = "search.manage"
+
+# File storage permissions (perennia-files integration)
+FILES_UPLOAD = "file.upload"
+FILES_VIEW = "file.view"
+FILES_MANAGE = "file.manage"
+
 PERMISSIONS: list[tuple[str, str]] = [
     (PROFILE_VIEW, "View your own profile page"),
     (REPORTS_VIEW, "View the reports area"),
     (ADMIN_ACCESS, "Access the administration area"),
+    (SEARCH_ACCESS, "Search across business resources"),
+    (SEARCH_MANAGE, "Manage search indexes and configuration"),
+    (FILES_UPLOAD, "Upload files to secure storage"),
+    (FILES_VIEW, "Download and view files"),
+    (FILES_MANAGE, "Manage files (versions, deletion, restoration)"),
 ]
 
 # Demo application roles and the permissions each one carries.
@@ -29,15 +43,15 @@ PERMISSIONS: list[tuple[str, str]] = [
 ROLES: dict[str, dict] = {
     "employee": {
         "description": "Standard ABC Enterprises employee",
-        "permissions": [PROFILE_VIEW],
+        "permissions": [PROFILE_VIEW, SEARCH_ACCESS, FILES_VIEW],
     },
     "manager": {
         "description": "Team manager with reporting access",
-        "permissions": [PROFILE_VIEW, REPORTS_VIEW],
+        "permissions": [PROFILE_VIEW, REPORTS_VIEW, SEARCH_ACCESS, SEARCH_MANAGE, FILES_UPLOAD, FILES_VIEW, FILES_MANAGE],
     },
     "administrator": {
         "description": "Full administrative access",
-        "permissions": [PROFILE_VIEW, REPORTS_VIEW, ADMIN_ACCESS],
+        "permissions": [PROFILE_VIEW, REPORTS_VIEW, ADMIN_ACCESS, SEARCH_ACCESS, SEARCH_MANAGE, FILES_UPLOAD, FILES_VIEW, FILES_MANAGE],
     },
 }
 
