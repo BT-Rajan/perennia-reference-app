@@ -27,6 +27,18 @@ const routes = [
     meta: { requiresAuth: true, permission: "reports.view" },
   },
   {
+    path: "/search",
+    name: "search",
+    component: () => import("../pages/SearchPage.vue"),
+    meta: { requiresAuth: true, permission: "search.execute" },
+  },
+  {
+    path: "/files",
+    name: "files",
+    component: () => import("../pages/FilesPage.vue"),
+    meta: { requiresAuth: true, permission: "file.view" },
+  },
+  {
     path: "/administration",
     name: "administration",
     component: () => import("../pages/AdministrationPage.vue"),

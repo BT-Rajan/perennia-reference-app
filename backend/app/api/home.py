@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from perennia_access import AuthenticatedIdentity
 
 from app.deps import access, get_current_identity
-from app.permissions.definitions import PROFILE_VIEW, REPORTS_VIEW, ADMIN_ACCESS
+from app.permissions.definitions import PROFILE_VIEW, REPORTS_VIEW, ADMIN_ACCESS, SEARCH_ACCESS, FILES_VIEW
 from app.schemas import HomeResponse, AreaSummary
 
 router = APIRouter(prefix="/api/home", tags=["home"])
@@ -13,6 +13,8 @@ router = APIRouter(prefix="/api/home", tags=["home"])
 _AREAS = [
     ("profile", "Profile", "/profile", PROFILE_VIEW),
     ("reports", "Reports", "/reports", REPORTS_VIEW),
+    ("search", "Search", "/search", SEARCH_ACCESS),
+    ("files", "Files", "/files", FILES_VIEW),
     ("administration", "Administration", "/administration", ADMIN_ACCESS),
 ]
 

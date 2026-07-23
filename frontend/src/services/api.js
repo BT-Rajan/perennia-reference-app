@@ -86,3 +86,43 @@ export async function apiFetch(path, { method = "GET", body, auth: withAuth = tr
   if (response.status === 204) return null;
   return response.json();
 }
+
+/**
+ * Perform an authenticated multipart/form-data request (file uploads and
+ * new file versions). Mirrors apiFetch's auth/refresh/error handling, but
+ * never sets a JSON Content-Type - the browser sets the multipart boundary
+ * itself when the body is a FormData instance.
+ */
+async function doUpload(path, formData) {
+  const headers = {};
+  const tokens = getTokens();
+  if (tokens && tokens.access_token) {
+    headers["Authorization"] = `Bearer ${tokens.access_token}`;
+  }
+
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, { method: "POST", headers, body: formData });
+  } catch {
+    throw new ApiError("network_error", resolveErrorMessage(null, "network_error"), 0);
+  }
+}
+
+export async function apiUpload(path, formData) {
+  let response = await doUpload(path, formData);
+
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      response = await doUpload(path, formData);
+    }
+  }
+
+  if (!response.ok) {
+    const errorBody = await parseErrorBody(response);
+    const code = errorBody ? errorBody.code : "unexpected_error";
+    const message = resolveErrorMessage(errorBody, "unexpected_error");
+    throw new ApiError(code, message, response.status);
+  }
+
+  return response.json();
+}

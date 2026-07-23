@@ -7,6 +7,8 @@
           <router-link to="/home">Home</router-link>
           <router-link v-if="hasPermission('profile.view')" to="/profile">Profile</router-link>
           <router-link v-if="hasPermission('reports.view')" to="/reports">Reports</router-link>
+          <router-link v-if="hasPermission('search.execute')" to="/search">Search</router-link>
+          <router-link v-if="hasPermission('file.view')" to="/files">Files</router-link>
           <router-link v-if="hasPermission('admin.access')" to="/administration">Administration</router-link>
           <button type="button" @click="onSignOut">Sign out</button>
         </template>
