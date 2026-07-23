@@ -24,7 +24,7 @@ from perennia_crud import CrudEngine, CrudConfig, DatabaseConfig as CrudDatabase
 from app.config.settings import load_settings
 from app.config.errors import AppError
 from app.mailer import ConsoleMailer
-from app import entities
+from app import entities, hooks
 
 settings = load_settings()
 
@@ -69,12 +69,40 @@ crud_config = CrudConfig(
 )
 
 # CRUD Engine Instances - one per entity, using perennia-crud once for all
-crud_clients = CrudEngine(crud_config, entities.clients, access=access)
-crud_products = CrudEngine(crud_config, entities.products, access=access)
-crud_raw_materials = CrudEngine(crud_config, entities.raw_materials, access=access)
-crud_formulas = CrudEngine(crud_config, entities.formulas, access=access)
-crud_suppliers = CrudEngine(crud_config, entities.suppliers, access=access)
-crud_orders = CrudEngine(crud_config, entities.orders, access=access)
+# Each engine is configured with:
+#   - Entity schema defining table, fields, permissions
+#   - Access control (perennia-access integration)
+#   - Business logic hooks for validation and side effects
+crud_clients = CrudEngine(
+    crud_config, entities.clients,
+    access=access,
+    hooks=hooks.ClientsHooks()
+)
+crud_products = CrudEngine(
+    crud_config, entities.products,
+    access=access,
+    hooks=hooks.ProductsHooks()
+)
+crud_raw_materials = CrudEngine(
+    crud_config, entities.raw_materials,
+    access=access,
+    hooks=hooks.RawMaterialsHooks()
+)
+crud_formulas = CrudEngine(
+    crud_config, entities.formulas,
+    access=access,
+    hooks=hooks.FormulasHooks()
+)
+crud_suppliers = CrudEngine(
+    crud_config, entities.suppliers,
+    access=access,
+    hooks=hooks.SuppliersHooks()
+)
+crud_orders = CrudEngine(
+    crud_config, entities.orders,
+    access=access,
+    hooks=hooks.OrdersHooks()
+)
 
 
 def _extract_bearer_token(authorization: str | None) -> str:
