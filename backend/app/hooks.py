@@ -21,9 +21,19 @@ business logic stays in the consuming module.
 """
 
 import logging
+from contextvars import ContextVar
 from datetime import datetime
 
 logger = logging.getLogger("perennia_crud_hooks")
+
+# Flipped on for the duration of the POST /api/quotations/{id}/approve
+# request only (see app/api/crud.py:approve_quotation). QuotationsHooks
+# uses it to tell "the dedicated approval endpoint is setting status to
+# Approved" apart from "a generic PUT /api/quotations/{id} is trying to" -
+# only the former is allowed through.
+quotation_approval_in_progress: ContextVar[bool] = ContextVar(
+    "quotation_approval_in_progress", default=False
+)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -60,7 +70,7 @@ class ClientsHooks:
     @staticmethod
     def before_delete(existing: dict) -> None:
         """Check if client can be deleted."""
-        # Could check for related orders here
+        # Could check for related quotations here
         logger.info(f"Client deletion initiated: {existing['id']} - {existing['name']}")
 
     @staticmethod
@@ -244,54 +254,73 @@ class SuppliersHooks:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Orders Hooks
+# Quotations Hooks
 # ═════════════════════════════════════════════════════════════════════════════
 
-class OrdersHooks:
-    """Business logic hooks for Order CRUD operations."""
+class QuotationsHooks:
+    """Business logic hooks for Quotation CRUD operations.
+
+    Who may call create() / the approve endpoint at all is enforced by
+    permissions (quotations.create / quotations.approve - see
+    app/permissions/definitions.py and QUOTATION_CREATOR_ROLE /
+    QUOTATION_APPROVER_ROLE in .env). This class adds one more rule that
+    permissions alone can't express: approving a quotation must go through
+    POST /api/quotations/{id}/approve, never through the generic
+    PUT /api/quotations/{id} - even for identities that otherwise hold
+    quotations.update.
+    """
 
     @staticmethod
     def before_create(data: dict) -> None:
-        """Validate order data before creation."""
-        if not data.get("order_no"):
-            raise ValueError("Order number is required")
+        """Validate quotation data before creation."""
+        if not data.get("quotation_no"):
+            raise ValueError("Quotation number is required")
         if not data.get("client_id"):
             raise ValueError("Client ID is required")
         if not data.get("product_id"):
             raise ValueError("Product ID is required")
-        
+
         qty = data.get("quantity_kg", 0)
         if qty <= 0:
             raise ValueError("Quantity must be positive")
 
+        if data.get("status") == "Approved":
+            raise ValueError("A new quotation cannot be created already Approved")
+        data.setdefault("status", "Draft")
+
     @staticmethod
     def after_create(record: dict) -> None:
-        """Log order creation."""
-        logger.info(f"Order created: {record['id']} - {record['order_no']} (qty: {record['quantity_kg']}kg)")
+        """Log quotation creation."""
+        logger.info(f"Quotation created: {record['id']} - {record['quotation_no']} (qty: {record['quantity_kg']}kg)")
 
     @staticmethod
     def before_update(existing: dict, data: dict) -> None:
-        """Validate order updates."""
-        # Prevent critical field changes for confirmed orders
-        if existing.get("status") != "Pending":
+        """Validate quotation updates."""
+        # Prevent critical field changes once a quotation has left Draft
+        if existing.get("status") not in ("Draft", "Pending"):
             if "client_id" in data or "product_id" in data:
-                raise ValueError(f"Cannot change client/product for {existing['status']} order")
-        
+                raise ValueError(f"Cannot change client/product for {existing['status']} quotation")
+
         if "quantity_kg" in data and data["quantity_kg"] <= 0:
             raise ValueError("Quantity must be positive")
 
+        if data.get("status") == "Approved" and not quotation_approval_in_progress.get():
+            raise ValueError(
+                "Quotations can only be approved via POST /api/quotations/{id}/approve"
+            )
+
     @staticmethod
     def after_update(record: dict) -> None:
-        """Log order update."""
-        logger.info(f"Order updated: {record['id']} - {record['order_no']} (status: {record['status']})")
+        """Log quotation update."""
+        logger.info(f"Quotation updated: {record['id']} - {record['quotation_no']} (status: {record['status']})")
 
     @staticmethod
     def before_delete(existing: dict) -> None:
-        """Validate order deletion."""
-        if existing.get("status") in ("Shipped", "Closed"):
-            raise ValueError(f"Cannot delete {existing['status']} order")
+        """Validate quotation deletion."""
+        if existing.get("status") == "Approved":
+            raise ValueError("Cannot delete an Approved quotation")
 
     @staticmethod
     def after_delete(existing: dict) -> None:
-        """Log order deletion."""
-        logger.info(f"Order soft-deleted: {existing['id']} - {existing['order_no']}")
+        """Log quotation deletion."""
+        logger.info(f"Quotation soft-deleted: {existing['id']} - {existing['quotation_no']}")

@@ -59,7 +59,7 @@ curl -X POST http://localhost:8000/api/clients \
 │  ┌──────────────────────▼─────────────────────────────────────┐ │
 │  │           Entity Schemas (entities.py)                     │ │
 │  │  - clients, products, raw_materials, formulas,            │ │
-│  │    suppliers, orders                                       │ │
+│  │    suppliers, quotations                                    │ │
 │  └──────────────────────┬─────────────────────────────────────┘ │
 │                         │                                         │
 │  ┌──────────────────────▼─────────────────────────────────────┐ │
@@ -80,7 +80,7 @@ curl -X POST http://localhost:8000/api/clients \
 │  ┌──────────────────────▼─────────────────────────────────────┐ │
 │  │              MySQL Database                                │ │
 │  │  - clients, products, raw_materials, formulas,           │ │
-│  │    suppliers, orders (with soft_delete support)         │ │
+│  │    suppliers, quotations (with soft_delete support)     │ │
 │  └──────────────────────────────────────────────────────────┘ │
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
@@ -162,7 +162,7 @@ perennia-reference-app/
 
 ```
 Clients (👥)
-  └─ Orders (📋)
+  └─ Quotations (🧾)
      ├─ Product (📦)
      │  └─ Formulas (🧪)
      │     └─ Raw Materials (🪨)
@@ -173,8 +173,8 @@ Clients (👥)
 ### Database Relationships
 ```sql
 -- Foreign Keys
-orders.client_id -> clients.id (RESTRICT)
-orders.product_id -> products.id (RESTRICT)
+quotations.client_id -> clients.id (RESTRICT)
+quotations.product_id -> products.id (RESTRICT)
 formulas.product_id -> products.id (CASCADE)
 formulas.material_id -> raw_materials.id (CASCADE)
 suppliers.name <- raw_materials.supplier_id (optional)

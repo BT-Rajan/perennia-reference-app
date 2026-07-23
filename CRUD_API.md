@@ -10,7 +10,7 @@ This API provides standardized CRUD endpoints for:
 - **🪨 Raw Materials** - Raw material definitions
 - **🧪 Formulas** - Bill of Materials (product composition)
 - **🚚 Suppliers** - Supplier master records
-- **📋 Orders** - Customer orders
+- **🧾 Quotations** - Client quotations (role-gated creation & approval)
 
 ## Architecture
 
@@ -46,16 +46,42 @@ Each entity has 5 operations:
 - `{entity}.delete` - Soft delete records
 - `{entity}.restore` - Restore soft-deleted records
 
+Quotations additionally have a 6th operation, `quotations.approve`, used only
+by `POST /api/quotations/{id}/approve`.
+
 ### Default Roles
 - **Employee**: Read-only access to all entities
-- **Manager**: Full CRUD on all entities
-- **Administrator**: Full CRUD + system management
+- **Manager**: Full CRUD on all entities except quotations (read/update/delete/restore only)
+- **Administrator**: Full CRUD + system management, except quotations (read/update/delete/restore only)
+
+### Quotations: Role-Gated Creation & Approval
+Unlike every other entity, `quotations.create` and `quotations.approve` are
+**not** assigned through the roles above. They are granted, exclusively, to
+the two roles named in `.env`:
+
+```
+QUOTATION_CREATOR_ROLE=manager        # only this role can create quotations
+QUOTATION_APPROVER_ROLE=administrator # only this role can approve quotations
+```
+
+At startup, `app/permissions/definitions.py:seed()` grants `quotations.create`
+to whichever role `QUOTATION_CREATOR_ROLE` names and `quotations.approve` to
+whichever role `QUOTATION_APPROVER_ROLE` names - and revokes those two
+permissions from every other role. Changing either value in `.env` and
+restarting the app is enough to move the restriction; no code change needed.
+Both variables must name a role that exists (`employee`, `manager`, or
+`administrator`), or the app will refuse to start.
+
+A quotation can never be approved through the generic
+`PUT /api/quotations/{id}` endpoint, even by an identity that holds
+`quotations.update` - only `POST /api/quotations/{id}/approve` can set
+status to `Approved`.
 
 ## API Endpoints
 
 ### Standard CRUD Endpoints
 
-Each entity (clients, products, raw_materials, formulas, suppliers, orders) supports:
+Each entity (clients, products, raw_materials, formulas, suppliers, quotations) supports:
 
 #### List Records
 ```http
@@ -410,35 +436,53 @@ Content-Type: application/json
 - Rating must be 1-5 (if provided)
 - Delivery cost cannot be negative
 
-### 📋 Orders
-**Table:** `orders`
+### 🧾 Quotations
+**Table:** `quotations`
 
 **Fields:**
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | id | BIGINT | ✓ | Auto-increment |
-| order_no | VARCHAR(50) | ✓ | Unique order number |
+| quotation_no | VARCHAR(50) | ✓ | Unique quotation number |
 | client_id | BIGINT | ✓ | FK to clients |
 | product_id | BIGINT | ✓ | FK to products |
 | quantity_kg | DECIMAL(14,3) | ✓ | Quantity in kg |
 | bag_size_kg | DECIMAL(10,3) | ✓ | Bag size (default: 50) |
 | bags | INT | ✓ | Number of bags |
-| delivery_date | DATE | | Expected delivery date |
-| status | ENUM | ✓ | Pending, Confirmed, In Production, Ready, Shipped, Closed, Cancelled |
+| valid_until | DATE | | Quotation validity date |
+| status | ENUM | ✓ | Draft, Pending, Approved, Rejected, Expired |
 | priority | ENUM | ✓ | Critical, High, Normal, Low |
-| notes | TEXT | | Order notes |
-| quotation_no | VARCHAR(50) | | Reference quotation |
+| notes | TEXT | | Quotation notes |
+| approved_by | VARCHAR(64) | | Subject ID of the approving identity (set by the approve endpoint) |
+| approved_at | DATETIME(6) | | Set by the approve endpoint |
 | deleted_at | DATETIME(6) | | Soft delete timestamp |
 | created_at | DATETIME(6) | ✓ | Auto-set |
 | updated_at | DATETIME(6) | ✓ | Auto-updated |
 
 **Validation:**
-- Order number required
+- Quotation number required
 - Client ID required
 - Product ID required
 - Quantity must be positive
-- Cannot modify client/product for non-Pending orders
-- Cannot delete Shipped/Closed orders
+- Cannot modify client/product once a quotation leaves Draft/Pending
+- Cannot delete an Approved quotation
+- Cannot be created already Approved
+- Cannot be moved to Approved through the generic update endpoint
+
+**Creating a quotation** (`POST /api/quotations`) requires the
+`quotations.create` permission, held only by the role named in
+`QUOTATION_CREATOR_ROLE` (`.env`).
+
+**Approving a quotation:**
+```http
+POST /api/quotations/{quotation_id}/approve
+```
+Requires the `quotations.approve` permission, held only by the role named in
+`QUOTATION_APPROVER_ROLE` (`.env`). Sets `status` to `Approved`, and stamps
+`approved_by` / `approved_at`. Returns `400` if the quotation is already
+approved. This is the only way to approve a quotation - `PUT
+/api/quotations/{quotation_id}` will reject any attempt to set
+`status: "Approved"`.
 
 ---
 

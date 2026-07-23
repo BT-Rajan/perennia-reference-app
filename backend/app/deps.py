@@ -98,10 +98,10 @@ crud_suppliers = CrudEngine(
     access=access,
     hooks=hooks.SuppliersHooks()
 )
-crud_orders = CrudEngine(
-    crud_config, entities.orders,
+crud_quotations = CrudEngine(
+    crud_config, entities.quotations,
     access=access,
-    hooks=hooks.OrdersHooks()
+    hooks=hooks.QuotationsHooks()
 )
 
 

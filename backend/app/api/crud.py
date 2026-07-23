@@ -11,22 +11,28 @@ Routes follow REST conventions:
 """
 
 from typing import Optional, List
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from perennia_crud.query import ListQuery, PagedResult
 from perennia_crud.exceptions import RecordNotFoundError
-from perennia_access import Identity
+from perennia_access import AuthenticatedIdentity as Identity
 
 from app.deps import (
     identity_required,
+    require_permission,
+    settings,
+    access,
     crud_clients,
     crud_products,
     crud_raw_materials,
     crud_formulas,
     crud_suppliers,
-    crud_orders,
+    crud_quotations,
 )
+from app.permissions.definitions import QUOTATIONS_APPROVE
+from app.hooks import quotation_approval_in_progress
 
 router = APIRouter(prefix="/api", tags=["CRUD"])
 
@@ -510,18 +516,25 @@ def restore_supplier(supplier_id: int, identity: Identity = Depends(identity_req
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Orders Endpoints
+# Quotations Endpoints
+#
+# Creation is restricted to QUOTATION_CREATOR_ROLE (.env) via the
+# quotations.create permission, enforced inside CrudEngine.create().
+# Approval has its own dedicated endpoint and its own permission,
+# quotations.approve, restricted to QUOTATION_APPROVER_ROLE (.env) - it is
+# NOT available through the generic update endpoint below (see
+# QuotationsHooks.before_update in app/hooks.py).
 # ═════════════════════════════════════════════════════════════════════════════
 
-@router.get("/orders", response_model=ListResponse)
-def list_orders(
+@router.get("/quotations", response_model=ListResponse)
+def list_quotations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     client_id: Optional[int] = None,
     status: Optional[str] = None,
     identity: Identity = Depends(identity_required),
 ):
-    """List all orders with optional filtering."""
+    """List all quotations with optional filtering."""
     filters = {}
     if client_id:
         filters["client_id"] = client_id
@@ -529,7 +542,7 @@ def list_orders(
         filters["status"] = status
 
     query = ListQuery(page=page, page_size=page_size, filters=filters)
-    result = crud_orders.list(query, identity=identity)
+    result = crud_quotations.list(query, identity=identity)
     return ListResponse(
         data=result.items,
         meta=ListResponseMeta(
@@ -542,57 +555,108 @@ def list_orders(
     )
 
 
-@router.get("/orders/{order_id}")
-def get_order(order_id: int, identity: Identity = Depends(identity_required)):
-    """Get a single order by ID."""
+@router.get("/quotations/{quotation_id}")
+def get_quotation(quotation_id: int, identity: Identity = Depends(identity_required)):
+    """Get a single quotation by ID."""
     try:
-        record = crud_orders.get(order_id, identity=identity)
+        record = crud_quotations.get(quotation_id, identity=identity)
         return {"data": record}
     except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail="Quotation not found")
 
 
-@router.post("/orders", response_model=CreateResponse)
-def create_order(data: dict, identity: Identity = Depends(identity_required)):
-    """Create a new order."""
+@router.post("/quotations", response_model=CreateResponse)
+def create_quotation(data: dict, identity: Identity = Depends(identity_required)):
+    """Create a new quotation.
+
+    Restricted to the role named by QUOTATION_CREATOR_ROLE in .env - enforced
+    via the quotations.create permission, which is granted only to that role
+    (see app/permissions/definitions.py:seed).
+    """
     try:
-        record = crud_orders.create(data, identity=identity)
+        record = crud_quotations.create(data, identity=identity)
         return CreateResponse(data=record)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/orders/{order_id}", response_model=UpdateResponse)
-def update_order(
-    order_id: int,
+@router.put("/quotations/{quotation_id}", response_model=UpdateResponse)
+def update_quotation(
+    quotation_id: int,
     data: dict,
     identity: Identity = Depends(identity_required)
 ):
-    """Update an existing order."""
+    """Update an existing quotation.
+
+    Cannot be used to approve a quotation - status can never be set to
+    "Approved" through this endpoint (see QuotationsHooks.before_update).
+    Use POST /api/quotations/{quotation_id}/approve instead.
+    """
     try:
-        record = crud_orders.update(order_id, data, identity=identity)
+        record = crud_quotations.update(quotation_id, data, identity=identity)
         return UpdateResponse(data=record)
     except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail="Quotation not found")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/orders/{order_id}", response_model=DeleteResponse)
-def delete_order(order_id: int, identity: Identity = Depends(identity_required)):
-    """Delete (soft delete) an order."""
+@router.delete("/quotations/{quotation_id}", response_model=DeleteResponse)
+def delete_quotation(quotation_id: int, identity: Identity = Depends(identity_required)):
+    """Delete (soft delete) a quotation."""
     try:
-        success = crud_orders.delete(order_id, identity=identity)
+        success = crud_quotations.delete(quotation_id, identity=identity)
         return DeleteResponse(success=success)
     except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail="Quotation not found")
 
 
-@router.post("/orders/{order_id}/restore")
-def restore_order(order_id: int, identity: Identity = Depends(identity_required)):
-    """Restore a soft-deleted order."""
+@router.post("/quotations/{quotation_id}/restore")
+def restore_quotation(quotation_id: int, identity: Identity = Depends(identity_required)):
+    """Restore a soft-deleted quotation."""
     try:
-        record = crud_orders.restore(order_id, identity=identity)
+        record = crud_quotations.restore(quotation_id, identity=identity)
         return {"data": record}
     except RecordNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail="Quotation not found")
+
+
+@router.post("/quotations/{quotation_id}/approve", response_model=UpdateResponse)
+def approve_quotation(
+    quotation_id: int,
+    identity: Identity = Depends(require_permission(QUOTATIONS_APPROVE)),
+):
+    """Approve a quotation.
+
+    Restricted to the role named by QUOTATION_APPROVER_ROLE in .env -
+    enforced via the quotations.approve permission, which is granted only to
+    that role (see app/permissions/definitions.py:seed). This is the only
+    endpoint that may move a quotation's status to "Approved".
+    """
+    try:
+        existing = crud_quotations.get(quotation_id, identity=identity)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+
+    if existing.get("status") == "Approved":
+        raise HTTPException(status_code=400, detail="Quotation is already approved")
+
+    token = quotation_approval_in_progress.set(True)
+    try:
+        record = crud_quotations.update(
+            quotation_id,
+            {
+                "status": "Approved",
+                "approved_by": identity.subject_id,
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+            },
+            identity=identity,
+        )
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        quotation_approval_in_progress.reset(token)
+
+    return UpdateResponse(data=record)

@@ -64,15 +64,23 @@ suppliers = EntitySchema(
     permission_prefix="suppliers"
 )
 
-# Orders entity
-orders = EntitySchema(
-    table="orders",
+# Quotations entity
+#
+# Creation and approval are additionally gated by role - see
+# QUOTATION_CREATOR_ROLE / QUOTATION_APPROVER_ROLE in .env, enforced via the
+# quotations.create / quotations.approve permissions in
+# app/permissions/definitions.py. approved_by / approved_at are listed here
+# so the CRUD engine can write them, but app/hooks.py:QuotationsHooks blocks
+# the generic update path from ever setting status to "Approved" - only the
+# dedicated POST /api/quotations/{id}/approve endpoint may do that.
+quotations = EntitySchema(
+    table="quotations",
     fields=[
-        "order_no", "client_id", "product_id", "quantity_kg", "bag_size_kg",
-        "bags", "delivery_date", "status", "priority", "notes", "quotation_no"
+        "quotation_no", "client_id", "product_id", "quantity_kg", "bag_size_kg",
+        "bags", "valid_until", "status", "priority", "notes", "approved_by", "approved_at"
     ],
     primary_key="id",
     soft_delete=True,
     soft_delete_column="deleted_at",
-    permission_prefix="orders"
+    permission_prefix="quotations"
 )

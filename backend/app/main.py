@@ -42,7 +42,7 @@ app.include_router(crud_bulk.router)
 def seed_permissions() -> None:
     """Idempotently create the application's permission vocabulary and demo
     roles in perennia-access. Safe to run on every startup."""
-    permission_definitions.seed(access)
+    permission_definitions.seed(access, settings)
     logger.info("Permission and role seed complete.")
 
 

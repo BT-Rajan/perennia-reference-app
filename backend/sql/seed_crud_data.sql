@@ -63,11 +63,11 @@ INSERT IGNORE INTO suppliers (name, contact_person, phone, email, address, gstin
 ('Global Silica', 'David Chen', '+91-97654-32106', 'silica@global.com', '400 Trade Center, TN', '33AABGS4567H4Z3', 'Raw Materials', 3, 'Net 60', 6000.00, 'Inactive', 'Seasonal supply');
 
 -- ────────────────────────────────────────────────────────────────────────────
--- Orders
+-- Quotations
 -- ────────────────────────────────────────────────────────────────────────────
-INSERT IGNORE INTO orders (order_no, client_id, product_id, quantity_kg, bag_size_kg, bags, delivery_date, status, priority, notes, quotation_no) VALUES
-('ORD-2024-001', 1, 1, 5000, 50, 100, '2024-02-15', 'Confirmed', 'High', 'Bulk order - monthly supply', 'QT-2024-0001'),
-('ORD-2024-002', 2, 2, 10000, 50, 200, '2024-02-20', 'In Production', 'Critical', 'Rush order - high strength', 'QT-2024-0002'),
-('ORD-2024-003', 3, 1, 2500, 50, 50, '2024-02-25', 'Pending', 'Normal', 'Regular order', 'QT-2024-0003'),
-('ORD-2024-004', 1, 3, 1000, 25, 40, '2024-03-05', 'Pending', 'Low', 'White cement - low volume', 'QT-2024-0004'),
-('ORD-2024-005', 5, 2, 7500, 50, 150, '2024-02-28', 'Ready', 'High', 'Construction project', 'QT-2024-0005');
+INSERT IGNORE INTO quotations (quotation_no, client_id, product_id, quantity_kg, bag_size_kg, bags, valid_until, status, priority, notes, approved_by, approved_at) VALUES
+('QT-2024-0001', 1, 1, 5000, 50, 100, '2024-03-15', 'Approved', 'High', 'Bulk quotation - monthly supply', 'demo-administrator', '2024-02-10 09:30:00'),
+('QT-2024-0002', 2, 2, 10000, 50, 200, '2024-03-20', 'Pending', 'Critical', 'Rush quotation - high strength', NULL, NULL),
+('QT-2024-0003', 3, 1, 2500, 50, 50, '2024-03-25', 'Draft', 'Normal', 'Regular quotation', NULL, NULL),
+('QT-2024-0004', 1, 3, 1000, 25, 40, '2024-04-05', 'Draft', 'Low', 'White cement - low volume', NULL, NULL),
+('QT-2024-0005', 5, 2, 7500, 50, 150, '2024-03-28', 'Rejected', 'High', 'Construction project - budget declined', NULL, NULL);

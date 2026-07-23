@@ -10,7 +10,7 @@ Provides endpoints for:
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
-from perennia_access import Identity
+from perennia_access import AuthenticatedIdentity as Identity
 
 from app.deps import (
     identity_required,
@@ -19,7 +19,7 @@ from app.deps import (
     crud_raw_materials,
     crud_formulas,
     crud_suppliers,
-    crud_orders,
+    crud_quotations,
 )
 
 router = APIRouter(prefix="/api/bulk", tags=["Bulk Operations"])
@@ -318,57 +318,62 @@ def bulk_restore_suppliers(
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Orders Bulk Operations
+# Quotations Bulk Operations
+#
+# bulk_create still goes through CrudEngine.create() per record, so
+# quotations.create (QUOTATION_CREATOR_ROLE) is enforced the same as the
+# single-record endpoint. There is no bulk approve - approval always goes
+# through POST /api/quotations/{id}/approve one at a time.
 # ═════════════════════════════════════════════════════════════════════════════
 
-@router.post("/orders/create")
-def bulk_create_orders(
+@router.post("/quotations/create")
+def bulk_create_quotations(
     records: List[dict],
     identity: Identity = Depends(identity_required),
 ):
-    """Bulk create multiple orders."""
+    """Bulk create multiple quotations."""
     try:
-        created = crud_orders.bulk_create(records, identity=identity)
+        created = crud_quotations.bulk_create(records, identity=identity)
         return {"data": created, "count": len(created)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/orders/update")
-def bulk_update_orders(
+@router.post("/quotations/update")
+def bulk_update_quotations(
     updates: List[dict],
     identity: Identity = Depends(identity_required),
 ):
-    """Bulk update multiple orders."""
+    """Bulk update multiple quotations. Cannot be used to approve quotations."""
     try:
         update_tuples = [(item["id"], item["data"]) for item in updates]
-        updated = crud_orders.bulk_update(update_tuples, identity=identity)
+        updated = crud_quotations.bulk_update(update_tuples, identity=identity)
         return {"data": updated, "count": len(updated)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/orders/delete")
-def bulk_delete_orders(
+@router.post("/quotations/delete")
+def bulk_delete_quotations(
     ids: List[int],
     identity: Identity = Depends(identity_required),
 ):
-    """Bulk delete (soft delete) multiple orders."""
+    """Bulk delete (soft delete) multiple quotations."""
     try:
-        count = crud_orders.bulk_delete(ids, identity=identity)
+        count = crud_quotations.bulk_delete(ids, identity=identity)
         return {"deleted": count}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/orders/restore")
-def bulk_restore_orders(
+@router.post("/quotations/restore")
+def bulk_restore_quotations(
     ids: List[int],
     identity: Identity = Depends(identity_required),
 ):
-    """Bulk restore multiple soft-deleted orders."""
+    """Bulk restore multiple soft-deleted quotations."""
     try:
-        restored = crud_orders.bulk_restore(ids, identity=identity)
+        restored = crud_quotations.bulk_restore(ids, identity=identity)
         return {"data": restored, "count": len(restored)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
