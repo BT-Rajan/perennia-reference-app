@@ -12,12 +12,14 @@ dependencies = [
     "uvicorn[standard]>=0.30,<1",
     "python-dotenv>=1.0,<2",
     "pydantic>=2.6,<3",
+    "python-multipart>=0.0.9,<1",
 
     # Core Perennia packages. These are NOT vendored into this repository -
     # they are installed as Git dependencies, exactly as a real Perennia
     # application would consume them.
     "perennia-auth @ git+https://github.com/BT-Rajan/perennia-auth.git@v1.0.0",
     "perennia-access @ git+https://github.com/BT-Rajan/perennia-access.git@v1.0.0",
+    "perennia-crud @ git+https://github.com/BT-Rajan/perennia-crud.git@main",
     "perennia-search @ git+https://github.com/BT-Rajan/perennia-search.git@main",
     "perennia-files @ git+https://github.com/BT-Rajan/perennia-files.git@main",
 ]
