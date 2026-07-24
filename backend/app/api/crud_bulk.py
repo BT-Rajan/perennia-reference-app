@@ -20,6 +20,7 @@ from app.deps import (
     crud_formulas,
     crud_suppliers,
     crud_quotations,
+    crud_orders,
 )
 
 router = APIRouter(prefix="/api/bulk", tags=["Bulk Operations"])
@@ -374,6 +375,53 @@ def bulk_restore_quotations(
     """Bulk restore multiple soft-deleted quotations."""
     try:
         restored = crud_quotations.bulk_restore(ids, identity=identity)
+        return {"data": restored, "count": len(restored)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Orders Bulk Operations
+#
+# No bulk create - orders are only ever created via
+# POST /api/quotations/convert-approved-to-orders.
+# ═════════════════════════════════════════════════════════════════════════════
+
+@router.post("/orders/update")
+def bulk_update_orders(
+    updates: List[dict],
+    identity: Identity = Depends(identity_required),
+):
+    """Bulk update multiple orders."""
+    try:
+        update_tuples = [(item["id"], item["data"]) for item in updates]
+        updated = crud_orders.bulk_update(update_tuples, identity=identity)
+        return {"data": updated, "count": len(updated)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/orders/delete")
+def bulk_delete_orders(
+    ids: List[int],
+    identity: Identity = Depends(identity_required),
+):
+    """Bulk delete (soft delete) multiple orders."""
+    try:
+        count = crud_orders.bulk_delete(ids, identity=identity)
+        return {"deleted": count}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/orders/restore")
+def bulk_restore_orders(
+    ids: List[int],
+    identity: Identity = Depends(identity_required),
+):
+    """Bulk restore multiple soft-deleted orders."""
+    try:
+        restored = crud_orders.bulk_restore(ids, identity=identity)
         return {"data": restored, "count": len(restored)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

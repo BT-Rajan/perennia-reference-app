@@ -84,3 +84,20 @@ quotations = EntitySchema(
     soft_delete_column="deleted_at",
     permission_prefix="quotations"
 )
+
+# Orders entity
+#
+# An order always originates from an Approved quotation - see
+# POST /api/quotations/convert-approved-to-orders in app/api/crud.py.
+# quotation_id links back to the source quotation (one order per quotation).
+orders = EntitySchema(
+    table="orders",
+    fields=[
+        "order_no", "quotation_id", "client_id", "product_id", "quantity_kg",
+        "bag_size_kg", "bags", "delivery_date", "status", "priority", "notes"
+    ],
+    primary_key="id",
+    soft_delete=True,
+    soft_delete_column="deleted_at",
+    permission_prefix="orders"
+)

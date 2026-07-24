@@ -324,3 +324,65 @@ class QuotationsHooks:
     def after_delete(existing: dict) -> None:
         """Log quotation deletion."""
         logger.info(f"Quotation soft-deleted: {existing['id']} - {existing['quotation_no']}")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Orders Hooks
+# ═════════════════════════════════════════════════════════════════════════════
+
+class OrdersHooks:
+    """Business logic hooks for Order CRUD operations.
+
+    Orders are only ever created by
+    POST /api/quotations/convert-approved-to-orders (see app/api/crud.py),
+    never by hand, but the same validation applies either way.
+    """
+
+    @staticmethod
+    def before_create(data: dict) -> None:
+        """Validate order data before creation."""
+        if not data.get("order_no"):
+            raise ValueError("Order number is required")
+        if not data.get("quotation_id"):
+            raise ValueError("Source quotation ID is required")
+        if not data.get("client_id"):
+            raise ValueError("Client ID is required")
+        if not data.get("product_id"):
+            raise ValueError("Product ID is required")
+
+        qty = data.get("quantity_kg", 0)
+        if qty <= 0:
+            raise ValueError("Quantity must be positive")
+        data.setdefault("status", "Pending")
+
+    @staticmethod
+    def after_create(record: dict) -> None:
+        """Log order creation."""
+        logger.info(f"Order created: {record['id']} - {record['order_no']} (from quotation {record['quotation_id']})")
+
+    @staticmethod
+    def before_update(existing: dict, data: dict) -> None:
+        """Validate order updates."""
+        if existing.get("status") in ("Shipped", "Closed") and (
+            "client_id" in data or "product_id" in data or "quotation_id" in data
+        ):
+            raise ValueError(f"Cannot change client/product/quotation for {existing['status']} order")
+
+        if "quantity_kg" in data and data["quantity_kg"] <= 0:
+            raise ValueError("Quantity must be positive")
+
+    @staticmethod
+    def after_update(record: dict) -> None:
+        """Log order update."""
+        logger.info(f"Order updated: {record['id']} - {record['order_no']} (status: {record['status']})")
+
+    @staticmethod
+    def before_delete(existing: dict) -> None:
+        """Validate order deletion."""
+        if existing.get("status") in ("Shipped", "Closed"):
+            raise ValueError(f"Cannot delete {existing['status']} order")
+
+    @staticmethod
+    def after_delete(existing: dict) -> None:
+        """Log order deletion."""
+        logger.info(f"Order soft-deleted: {existing['id']} - {existing['order_no']}")

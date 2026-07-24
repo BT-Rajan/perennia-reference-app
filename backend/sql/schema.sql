@@ -289,3 +289,30 @@ CREATE TABLE IF NOT EXISTS quotations (
     INDEX idx_status (status),
     INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Client quotations, role-gated creation and approval';
+
+-- Orders: created only from Approved quotations, via
+-- POST /api/quotations/convert-approved-to-orders (see CRUD_API.md).
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    order_no VARCHAR(50) NOT NULL UNIQUE,
+    quotation_id BIGINT NOT NULL UNIQUE,
+    client_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity_kg DECIMAL(14,3) NOT NULL,
+    bag_size_kg DECIMAL(10,3) NOT NULL DEFAULT 50,
+    bags INT NOT NULL DEFAULT 0,
+    delivery_date DATE NULL,
+    status ENUM('Pending','Confirmed','In Production','Ready','Shipped','Closed','Cancelled') NOT NULL DEFAULT 'Pending',
+    priority ENUM('Critical','High','Normal','Low') NOT NULL DEFAULT 'Normal',
+    notes TEXT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_order_quotation FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_client_id (client_id),
+    INDEX idx_product_id (product_id),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Orders, created only by converting an Approved quotation';

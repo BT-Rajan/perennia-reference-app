@@ -104,6 +104,12 @@ crud_quotations = CrudEngine(
     hooks=hooks.QuotationsHooks()
 )
 
+crud_orders = CrudEngine(
+    crud_config, entities.orders,
+    access=access,
+    hooks=hooks.OrdersHooks()
+)
+
 
 def _extract_bearer_token(authorization: str | None) -> str:
     if not authorization or not authorization.lower().startswith("bearer "):

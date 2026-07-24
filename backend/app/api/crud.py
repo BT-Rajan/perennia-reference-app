@@ -30,8 +30,9 @@ from app.deps import (
     crud_formulas,
     crud_suppliers,
     crud_quotations,
+    crud_orders,
 )
-from app.permissions.definitions import QUOTATIONS_APPROVE
+from app.permissions.definitions import QUOTATIONS_APPROVE, ORDERS_CREATE
 from app.hooks import quotation_approval_in_progress
 
 router = APIRouter(prefix="/api", tags=["CRUD"])
@@ -660,3 +661,154 @@ def approve_quotation(
         quotation_approval_in_progress.reset(token)
 
     return UpdateResponse(data=record)
+
+
+@router.post("/quotations/convert-approved-to-orders")
+def convert_approved_quotations_to_orders(
+    identity: Identity = Depends(require_permission(ORDERS_CREATE)),
+):
+    """Create an Order for every Approved quotation that doesn't already have one.
+
+    Quotations that are not Approved, or that were already converted, are
+    left untouched. order_no is derived from quotation_no (QT- -> ORD-).
+    """
+    approved = []
+    page = 1
+    while True:
+        result = crud_quotations.list(
+            ListQuery(page=page, page_size=100, filters={"status": "Approved"}),
+            identity=identity,
+        )
+        approved.extend(result.items)
+        if page * 100 >= result.total:
+            break
+        page += 1
+
+    existing_orders = []
+    page = 1
+    while True:
+        result = crud_orders.list(
+            ListQuery(page=page, page_size=100, include_deleted=True),
+            identity=identity,
+        )
+        existing_orders.extend(result.items)
+        if page * 100 >= result.total:
+            break
+        page += 1
+    already_converted = {o["quotation_id"] for o in existing_orders}
+
+    created = []
+    skipped = 0
+    for q in approved:
+        if q["id"] in already_converted:
+            skipped += 1
+            continue
+
+        order_no = (
+            "ORD-" + q["quotation_no"][3:]
+            if q["quotation_no"].startswith("QT-")
+            else f"ORD-{q['quotation_no']}"
+        )
+        order_data = {
+            "order_no": order_no,
+            "quotation_id": q["id"],
+            "client_id": q["client_id"],
+            "product_id": q["product_id"],
+            "quantity_kg": q["quantity_kg"],
+            "bag_size_kg": q["bag_size_kg"],
+            "bags": q["bags"],
+            "delivery_date": q.get("valid_until"),
+            "priority": q.get("priority", "Normal"),
+            "notes": f"Converted from quotation {q['quotation_no']}",
+        }
+        try:
+            created.append(crud_orders.create(order_data, identity=identity))
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to convert quotation {q['quotation_no']}: {e}",
+            )
+
+    return {"created": created, "created_count": len(created), "skipped_already_converted": skipped}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Orders Endpoints
+#
+# Orders are only ever created via the conversion endpoint above - there is
+# deliberately no POST /api/orders.
+# ═════════════════════════════════════════════════════════════════════════════
+
+@router.get("/orders", response_model=ListResponse)
+def list_orders(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    client_id: Optional[int] = None,
+    status: Optional[str] = None,
+    identity: Identity = Depends(identity_required),
+):
+    """List all orders with optional filtering."""
+    filters = {}
+    if client_id:
+        filters["client_id"] = client_id
+    if status:
+        filters["status"] = status
+
+    query = ListQuery(page=page, page_size=page_size, filters=filters)
+    result = crud_orders.list(query, identity=identity)
+    return ListResponse(
+        data=result.items,
+        meta=ListResponseMeta(
+            pagination=PaginationInfo(
+                total=result.total,
+                page=result.page,
+                page_size=result.page_size
+            )
+        )
+    )
+
+
+@router.get("/orders/{order_id}")
+def get_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Get a single order by ID."""
+    try:
+        record = crud_orders.get(order_id, identity=identity)
+        return {"data": record}
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+
+@router.put("/orders/{order_id}", response_model=UpdateResponse)
+def update_order(
+    order_id: int,
+    data: dict,
+    identity: Identity = Depends(identity_required)
+):
+    """Update an existing order (e.g. progressing its status)."""
+    try:
+        record = crud_orders.update(order_id, data, identity=identity)
+        return UpdateResponse(data=record)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/orders/{order_id}", response_model=DeleteResponse)
+def delete_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Delete (soft delete) an order."""
+    try:
+        success = crud_orders.delete(order_id, identity=identity)
+        return DeleteResponse(success=success)
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+
+@router.post("/orders/{order_id}/restore")
+def restore_order(order_id: int, identity: Identity = Depends(identity_required)):
+    """Restore a soft-deleted order."""
+    try:
+        record = crud_orders.restore(order_id, identity=identity)
+        return {"data": record}
+    except RecordNotFoundError:
+        raise HTTPException(status_code=404, detail="Order not found")

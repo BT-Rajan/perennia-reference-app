@@ -11,6 +11,7 @@ This API provides standardized CRUD endpoints for:
 - **🧪 Formulas** - Bill of Materials (product composition)
 - **🚚 Suppliers** - Supplier master records
 - **🧾 Quotations** - Client quotations (role-gated creation & approval)
+- **📋 Orders** - Created only by converting Approved quotations
 
 ## Architecture
 
@@ -81,7 +82,7 @@ status to `Approved`.
 
 ### Standard CRUD Endpoints
 
-Each entity (clients, products, raw_materials, formulas, suppliers, quotations) supports:
+Each entity (clients, products, raw_materials, formulas, suppliers, quotations, orders) supports:
 
 #### List Records
 ```http
@@ -483,6 +484,23 @@ Requires the `quotations.approve` permission, held only by the role named in
 approved. This is the only way to approve a quotation - `PUT
 /api/quotations/{quotation_id}` will reject any attempt to set
 `status: "Approved"`.
+
+---
+
+### 📋 Orders
+**Table:** `orders`. Same fields as before, plus `quotation_id` (FK, unique - one order per quotation).
+
+Orders are never created by hand - there is no `POST /api/orders`. Instead:
+```http
+POST /api/quotations/convert-approved-to-orders
+```
+Requires `orders.create`. Creates one order for every quotation with
+`status: "Approved"` that doesn't already have one (matched by
+`quotation_id`), copying its client/product/quantity/priority. Already-converted
+quotations are skipped, so it's safe to call repeatedly. `order_no` is derived
+from `quotation_no` (`QT-... -> ORD-...`). Otherwise supports the standard
+`GET /api/orders`, `GET/PUT/DELETE /api/orders/{id}`,
+`POST /api/orders/{id}/restore`, and bulk update/delete/restore.
 
 ---
 

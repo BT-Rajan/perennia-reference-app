@@ -71,3 +71,9 @@ INSERT IGNORE INTO quotations (quotation_no, client_id, product_id, quantity_kg,
 ('QT-2024-0003', 3, 1, 2500, 50, 50, '2024-03-25', 'Draft', 'Normal', 'Regular quotation', NULL, NULL),
 ('QT-2024-0004', 1, 3, 1000, 25, 40, '2024-04-05', 'Draft', 'Low', 'White cement - low volume', NULL, NULL),
 ('QT-2024-0005', 5, 2, 7500, 50, 150, '2024-03-28', 'Rejected', 'High', 'Construction project - budget declined', NULL, NULL);
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Orders (one per Approved quotation above - see quotation QT-2024-0001)
+-- ────────────────────────────────────────────────────────────────────────────
+INSERT IGNORE INTO orders (order_no, quotation_id, client_id, product_id, quantity_kg, bag_size_kg, bags, delivery_date, status, priority, notes) VALUES
+('ORD-2024-0001', 1, 1, 1, 5000, 50, 100, '2024-03-01', 'Pending', 'High', 'Converted from quotation QT-2024-0001');

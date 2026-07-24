@@ -73,6 +73,15 @@ QUOTATIONS_DELETE = "quotations.delete"
 QUOTATIONS_RESTORE = "quotations.restore"
 QUOTATIONS_APPROVE = "quotations.approve"
 
+# ─── Orders Entity Permissions
+# Orders are only ever created via POST /api/quotations/convert-approved-to-orders
+# (requires orders.create), never a manual "new order" form.
+ORDERS_CREATE = "orders.create"
+ORDERS_READ = "orders.read"
+ORDERS_UPDATE = "orders.update"
+ORDERS_DELETE = "orders.delete"
+ORDERS_RESTORE = "orders.restore"
+
 PERMISSIONS: list[tuple[str, str]] = [
     (PROFILE_VIEW, "View your own profile page"),
     (REPORTS_VIEW, "View the reports area"),
@@ -113,6 +122,11 @@ PERMISSIONS: list[tuple[str, str]] = [
     (QUOTATIONS_DELETE, "Delete quotations"),
     (QUOTATIONS_RESTORE, "Restore quotations"),
     (QUOTATIONS_APPROVE, "Approve quotations"),
+    (ORDERS_CREATE, "Create orders"),
+    (ORDERS_READ, "View orders"),
+    (ORDERS_UPDATE, "Update orders"),
+    (ORDERS_DELETE, "Delete orders"),
+    (ORDERS_RESTORE, "Restore orders"),
 ]
 
 # Demo application roles and the permissions each one carries.
@@ -125,7 +139,7 @@ ROLES: dict[str, dict] = {
             PROFILE_VIEW, SEARCH_ACCESS, FILES_VIEW,
             # Read-only access to all CRUD entities
             CLIENTS_READ, PRODUCTS_READ, RAW_MATERIALS_READ,
-            FORMULAS_READ, SUPPLIERS_READ, QUOTATIONS_READ,
+            FORMULAS_READ, SUPPLIERS_READ, QUOTATIONS_READ, ORDERS_READ,
         ],
     },
     "manager": {
@@ -141,6 +155,7 @@ ROLES: dict[str, dict] = {
             SUPPLIERS_CREATE, SUPPLIERS_READ, SUPPLIERS_UPDATE, SUPPLIERS_DELETE, SUPPLIERS_RESTORE,
             # quotations.create is granted separately below, to QUOTATION_CREATOR_ROLE only
             QUOTATIONS_READ, QUOTATIONS_UPDATE, QUOTATIONS_DELETE, QUOTATIONS_RESTORE,
+            ORDERS_CREATE, ORDERS_READ, ORDERS_UPDATE, ORDERS_DELETE, ORDERS_RESTORE,
         ],
     },
     "administrator": {
@@ -156,6 +171,7 @@ ROLES: dict[str, dict] = {
             SUPPLIERS_CREATE, SUPPLIERS_READ, SUPPLIERS_UPDATE, SUPPLIERS_DELETE, SUPPLIERS_RESTORE,
             # quotations.create is granted separately below, to QUOTATION_CREATOR_ROLE only
             QUOTATIONS_READ, QUOTATIONS_UPDATE, QUOTATIONS_DELETE, QUOTATIONS_RESTORE,
+            ORDERS_CREATE, ORDERS_READ, ORDERS_UPDATE, ORDERS_DELETE, ORDERS_RESTORE,
         ],
     },
 }
