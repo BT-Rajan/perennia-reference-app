@@ -83,7 +83,7 @@ def main() -> None:
     )
 
     # Ensure the permission vocabulary and demo roles exist first.
-    permission_definitions.seed(access)
+    permission_definitions.seed(access, settings)
 
     print(f"{'Email':45} {'Role':15} Status")
     print("-" * 75)

@@ -649,7 +649,7 @@ def approve_quotation(
             {
                 "status": "Approved",
                 "approved_by": identity.subject_id,
-                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
             },
             identity=identity,
         )
@@ -672,14 +672,20 @@ def convert_approved_quotations_to_orders(
     Quotations that are not Approved, or that were already converted, are
     left untouched. order_no is derived from quotation_no (QT- -> ORD-).
     """
+    # NOTE: ListQuery.filters in the installed perennia-crud expects a list
+    # of FilterCondition objects, not a dict - unlike the dict-filter calls
+    # used elsewhere in this file (a pre-existing mismatch, not introduced
+    # here). To stay correct regardless of that, we page through everything
+    # and filter for "Approved" in Python instead of relying on server-side
+    # filtering.
     approved = []
     page = 1
     while True:
         result = crud_quotations.list(
-            ListQuery(page=page, page_size=100, filters={"status": "Approved"}),
+            ListQuery(page=page, page_size=100),
             identity=identity,
         )
-        approved.extend(result.items)
+        approved.extend(q for q in result.items if q.get("status") == "Approved")
         if page * 100 >= result.total:
             break
         page += 1
